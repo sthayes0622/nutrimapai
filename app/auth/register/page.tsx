@@ -6,10 +6,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SpinnerIcon } from "@/components/ui/icons";
 
-export default function SignInPage() {
+export default function RegisterPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -18,18 +17,27 @@ export default function SignInPage() {
     setLoading(true);
     setError("");
 
-    const res = await signIn("credentials", {
-      email,
-      password,
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || "Registration failed");
+      setLoading(false);
+      return;
+    }
+
+    // Auto sign in after registration
+    await signIn("credentials", {
+      email: form.email,
+      password: form.password,
       redirect: false,
     });
 
-    if (res?.error) {
-      setError("Invalid email or password");
-      setLoading(false);
-    } else {
-      router.push("/dashboard");
-    }
+    router.push("/onboarding");
   }
 
   return (
@@ -40,17 +48,29 @@ export default function SignInPage() {
             <span className="text-2xl">🥗</span>
             <span className="font-bold text-xl text-gray-900">NutriMap AI</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
+          <p className="text-gray-500 text-sm mt-1">Free to start. No credit card required.</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Jane Smith"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
                 required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="you@example.com"
@@ -60,11 +80,12 @@ export default function SignInPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
+                minLength={8}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="••••••••"
+                placeholder="8+ characters"
               />
             </div>
 
@@ -75,15 +96,15 @@ export default function SignInPage() {
               disabled={loading}
               className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? <SpinnerIcon className="w-4 h-4 animate-spin" /> : null}
-              Sign In
+              {loading && <SpinnerIcon className="w-4 h-4 animate-spin" />}
+              Create Account
             </button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-4">
-            Don&apos;t have an account?{" "}
-            <Link href="/auth/register" className="text-green-600 font-medium hover:text-green-700">
-              Sign up free
+            Already have an account?{" "}
+            <Link href="/auth/signin" className="text-green-600 font-medium hover:text-green-700">
+              Sign in
             </Link>
           </p>
         </div>

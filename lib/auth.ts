@@ -1,9 +1,11 @@
 import { NextAuthOptions } from "next-auth";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
+import { prisma } from "./prisma";
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -14,15 +16,16 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // In production, query the database here
-        // For demo, accept any valid-looking credentials
-        const mockUser = {
-          id: "demo-user-1",
-          email: credentials.email,
-          name: credentials.email.split("@")[0],
-        };
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
 
-        return mockUser;
+        if (!user || !user.password) return null;
+
+        const valid = await bcrypt.compare(credentials.password, user.password);
+        if (!valid) return null;
+
+        return { id: user.id, email: user.email, name: user.name };
       },
     }),
   ],
@@ -34,9 +37,7 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
+      if (user) token.id = user.id;
       return token;
     },
     async session({ session, token }) {
@@ -46,5 +47,5 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production",
+  secret: process.env.NEXTAUTH_SECRET,
 };
