@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SpinnerIcon } from "@/components/ui/icons";
 
-type Step = "profile" | "diet" | "calculating";
+type Step = "profile" | "diet" | "preferences" | "calculating";
 
 const ACTIVITY_OPTIONS = [
   { value: "sedentary", label: "Sedentary", desc: "Little or no exercise" },
@@ -47,6 +47,9 @@ export default function OnboardingPage() {
     useMetric: false,
     heightCm: "",
     weightKg: "",
+    dislikedFoods: "",
+    allergies: "",
+    cuisinePreferences: "",
   });
 
   function set(key: string, val: string | boolean) {
@@ -88,7 +91,13 @@ export default function OnboardingPage() {
       if (!res.ok) throw new Error("Failed to calculate nutrition");
 
       const profile = await res.json();
-      localStorage.setItem("nutrimap_profile", JSON.stringify(profile));
+      const profileWithPrefs = {
+        ...profile,
+        dislikedFoods: form.dislikedFoods,
+        allergies: form.allergies,
+        cuisinePreferences: form.cuisinePreferences,
+      };
+      localStorage.setItem("nutrimap_profile", JSON.stringify(profileWithPrefs));
       router.push("/dashboard");
     } catch {
       setError("Something went wrong. Please try again.");
@@ -120,31 +129,33 @@ export default function OnboardingPage() {
 
           {/* Progress */}
           <div className="flex items-center gap-2 justify-center mb-6">
-            {(["profile", "diet"] as const).map((s, i) => (
+            {(["profile", "diet", "preferences"] as const).map((s, i) => (
               <div key={s} className="flex items-center gap-2">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                     step === s
                       ? "bg-green-600 text-white"
-                      : (step === "diet" && s === "profile")
+                      : (["diet", "preferences"].includes(step) && s === "profile") || (step === "preferences" && s === "diet")
                       ? "bg-green-200 text-green-700"
                       : "bg-gray-200 text-gray-500"
                   }`}
                 >
                   {i + 1}
                 </div>
-                {i < 1 && <div className="w-12 h-1 bg-gray-200 rounded" />}
+                {i < 2 && <div className="w-12 h-1 bg-gray-200 rounded" />}
               </div>
             ))}
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900">
-            {step === "profile" ? "Tell us about yourself" : "Choose your diet style"}
+            {step === "profile" ? "Tell us about yourself" : step === "diet" ? "Choose your diet style" : "Food preferences"}
           </h1>
           <p className="text-gray-600 mt-1 text-sm">
             {step === "profile"
               ? "We'll calculate your personalized nutrition targets"
-              : "We'll build a meal plan around your preferences"}
+              : step === "diet"
+              ? "We'll build a meal plan around your preferences"
+              : "Help us avoid foods you dislike or can't eat"}
           </p>
         </div>
 
@@ -350,6 +361,61 @@ export default function OnboardingPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep("profile")}
+                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  ← Back
+                </button>
+                <button
+                  onClick={() => setStep("preferences")}
+                  className="flex-2 flex-grow bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors"
+                >
+                  Next: Food Preferences →
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Foods you dislike or want to avoid</label>
+                <input
+                  type="text"
+                  value={form.dislikedFoods}
+                  onChange={(e) => set("dislikedFoods", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="e.g. fish, mushrooms, olives"
+                />
+                <p className="text-xs text-gray-400 mt-1">Separate with commas</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Allergies or intolerances</label>
+                <input
+                  type="text"
+                  value={form.allergies}
+                  onChange={(e) => set("allergies", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="e.g. peanuts, gluten, dairy, shellfish"
+                />
+                <p className="text-xs text-gray-400 mt-1">We&apos;ll completely exclude these</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cuisine preferences (optional)</label>
+                <input
+                  type="text"
+                  value={form.cuisinePreferences}
+                  onChange={(e) => set("cuisinePreferences", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="e.g. Italian, Mexican, Asian, American"
+                />
+                <p className="text-xs text-gray-400 mt-1">We&apos;ll lean toward these cuisines</p>
+              </div>
+
+              {error && <p className="text-red-600 text-sm text-center">{error}</p>}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep("diet")}
                   className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
                 >
                   ← Back

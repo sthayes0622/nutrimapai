@@ -8,7 +8,7 @@ const anthropic = new Anthropic({
 const MODEL = "claude-opus-4-8";
 
 export async function generateMealPlan(
-  profile: NutritionProfile,
+  profile: NutritionProfile & { dislikedFoods?: string; allergies?: string; cuisinePreferences?: string },
   dietStyle: DietStyle
 ): Promise<MealPlan> {
   const dietDescriptions: Record<DietStyle, string> = {
@@ -21,13 +21,19 @@ export async function generateMealPlan(
     custom: "balanced with variety",
   };
 
+  const preferencesText = [
+    profile.allergies ? `- ALLERGIES (never include): ${profile.allergies}` : "",
+    profile.dislikedFoods ? `- Foods to avoid (disliked): ${profile.dislikedFoods}` : "",
+    profile.cuisinePreferences ? `- Preferred cuisines: ${profile.cuisinePreferences}` : "",
+  ].filter(Boolean).join("\n");
+
   const prompt = `You are a professional nutritionist. Create a detailed 7-day meal plan for someone with these nutrition needs:
 
 - Daily Calories: ${profile.dailyCalories} kcal
 - Protein: ${profile.proteinG}g
 - Carbohydrates: ${profile.carbsG}g
 - Fat: ${profile.fatG}g
-- Diet Style: ${dietDescriptions[dietStyle]}
+- Diet Style: ${dietDescriptions[dietStyle]}${preferencesText ? `\n${preferencesText}` : ""}
 
 Return ONLY valid JSON matching this exact structure (no markdown, no explanation):
 {
