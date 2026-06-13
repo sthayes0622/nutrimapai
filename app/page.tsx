@@ -31,7 +31,7 @@ const plans = [
     price: "$7.99",
     period: "/month",
     yearlyPrice: "$59/year",
-    features: ["Everything in Free", "Unlimited meal plans", "Unlimited grocery lists", "Custom diet preferences", "Priority AI generation"],
+    features: ["All Free features included", "Unlimited meal plans", "Unlimited grocery lists", "Custom diet preferences", "Priority AI generation"],
     cta: "Start Premium",
     href: "/auth/register?plan=premium",
     highlight: true,
