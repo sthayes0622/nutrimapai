@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CheckIcon } from "@/components/ui/icons";
+import { MobileInstallBanner } from "@/components/MobileInstallBanner";
 
 const features = [
   { title: "Smart Nutrition Calculator", desc: "Get your personalized daily calorie and macro targets based on your body, activity, and goals.", icon: "🎯" },
@@ -41,6 +42,7 @@ const plans = [
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
+      <MobileInstallBanner />
       {/* Nav */}
       <nav className="border-b border-gray-100 bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
