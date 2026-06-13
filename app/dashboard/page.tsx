@@ -34,6 +34,7 @@ export default function DashboardPage() {
     setGenerating(true);
     setError("");
     setLimitReached(false);
+    setMealPlan(null);
 
     try {
       const res = await fetch("/api/meal-plan", {
@@ -45,14 +46,74 @@ export default function DashboardPage() {
       if (res.status === 403) { setLimitReached(true); return; }
       if (!res.ok) throw new Error("Failed");
 
-      const plan: MealPlan = await res.json();
-      setMealPlan(plan);
-      localStorage.setItem("nutrimap_meal_plan", JSON.stringify(plan));
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+
+        // Extract complete days progressively
+        const days = extractCompleteDays(accumulated);
+        if (days.length > 0) {
+          setMealPlan((prev) => ({
+            name: prev?.name || "7-Day Meal Plan",
+            dietStyle: (profile.dietStyle as MealPlan["dietStyle"]) || "balanced",
+            days,
+          }));
+        }
+      }
+
+      // Final parse for name/dietStyle
+      const jsonMatch = accumulated.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const plan: MealPlan = JSON.parse(jsonMatch[0]);
+        setMealPlan(plan);
+        localStorage.setItem("nutrimap_meal_plan", JSON.stringify(plan));
+      }
     } catch {
       setError("Failed to generate meal plan. Please try again.");
     } finally {
       setGenerating(false);
     }
+  }
+
+  function extractCompleteDays(text: string) {
+    const daysMatch = text.match(/"days"\s*:\s*\[/);
+    if (!daysMatch || daysMatch.index === undefined) return [];
+
+    const days: MealPlan["days"] = [];
+    let i = daysMatch.index + daysMatch[0].length;
+
+    while (i < text.length) {
+      while (i < text.length && /[\s,]/.test(text[i])) i++;
+      if (text[i] !== "{") break;
+
+      let depth = 0;
+      let j = i;
+      while (j < text.length) {
+        const ch = text[j];
+        if (ch === '"') {
+          j++;
+          while (j < text.length && text[j] !== '"') {
+            if (text[j] === "\\") j++;
+            j++;
+          }
+        } else if (ch === "{") depth++;
+        else if (ch === "}") { depth--; if (depth === 0) break; }
+        j++;
+      }
+
+      if (depth !== 0) break;
+      try {
+        days.push(JSON.parse(text.slice(i, j + 1)));
+      } catch { break; }
+      i = j + 1;
+    }
+
+    return days;
   }
 
   if (!profile) {
@@ -145,7 +206,7 @@ export default function DashboardPage() {
             {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
             <button onClick={generatePlan} disabled={generating}
               className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
-              {generating ? <><SpinnerIcon className="w-4 h-4 animate-spin" /> Generating... (30–60 sec)</> : "Generate Meal Plan →"}
+              {generating ? <><SpinnerIcon className="w-4 h-4 animate-spin" /> Generating your plan...</> : "Generate Meal Plan →"}
             </button>
           </div>
         ) : (
@@ -153,8 +214,8 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">{mealPlan.name}</h2>
               <div className="flex gap-3">
-                <button onClick={generatePlan} disabled={generating} className="text-sm text-green-600 hover:text-green-700 font-medium disabled:opacity-50">
-                  {generating ? "Regenerating..." : "Regenerate"}
+                <button onClick={generatePlan} disabled={generating} className="text-sm text-green-600 hover:text-green-700 font-medium disabled:opacity-50 inline-flex items-center gap-1">
+                  {generating ? <><SpinnerIcon className="w-3 h-3 animate-spin" /> Generating...</> : "Regenerate"}
                 </button>
                 <Link href="/grocery" className="text-sm bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700">
                   Grocery List →
