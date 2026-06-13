@@ -26,6 +26,7 @@ export default function AccountPage() {
 
   const success = searchParams.get("success");
   const canceled = searchParams.get("canceled");
+  const upgrade = searchParams.get("upgrade");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth/signin");
@@ -35,8 +36,14 @@ export default function AccountPage() {
     if (!session) return;
     fetch("/api/account")
       .then((r) => r.json())
-      .then(setAccount);
-  }, [session]);
+      .then((data) => {
+        setAccount(data);
+        // Auto-trigger monthly checkout if coming from premium sign-up
+        if (upgrade === "true" && data.plan !== "premium") {
+          handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID!);
+        }
+      });
+  }, [session, upgrade]);
 
   async function handleUpgrade(priceId: string) {
     setLoading(true);

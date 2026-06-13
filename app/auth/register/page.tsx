@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SpinnerIcon } from "@/components/ui/icons";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const plan = searchParams.get("plan");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,14 +32,18 @@ export default function RegisterPage() {
       return;
     }
 
-    // Auto sign in after registration
     await signIn("credentials", {
       email: form.email,
       password: form.password,
       redirect: false,
     });
 
-    router.push("/onboarding");
+    // If they came from premium CTA, send to account to upgrade
+    if (plan === "premium") {
+      router.push("/account?upgrade=true");
+    } else {
+      router.push("/onboarding");
+    }
   }
 
   return (
@@ -48,8 +54,12 @@ export default function RegisterPage() {
             <span className="text-2xl">🥗</span>
             <span className="font-bold text-xl text-gray-900">NutriMap AI</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
-          <p className="text-gray-500 text-sm mt-1">Free to start. No credit card required.</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {plan === "premium" ? "Start your Premium account" : "Create your account"}
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {plan === "premium" ? "Then complete checkout to unlock unlimited plans." : "Free to start. No credit card required."}
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -97,15 +107,13 @@ export default function RegisterPage() {
               className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <SpinnerIcon className="w-4 h-4 animate-spin" />}
-              Create Account
+              {plan === "premium" ? "Create Account & Continue to Payment" : "Create Account"}
             </button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-4">
             Already have an account?{" "}
-            <Link href="/auth/signin" className="text-green-600 font-medium hover:text-green-700">
-              Sign in
-            </Link>
+            <Link href="/auth/signin" className="text-green-600 font-medium hover:text-green-700">Sign in</Link>
           </p>
         </div>
       </div>
