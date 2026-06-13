@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+
+export const maxDuration = 300;
 import { generateMealPlan } from "@/lib/claude";
 import type { NutritionProfile } from "@/lib/types";
 

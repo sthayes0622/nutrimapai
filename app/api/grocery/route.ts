@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const maxDuration = 300;
 import { generateGroceryList } from "@/lib/claude";
 import type { MealPlan } from "@/lib/types";
 

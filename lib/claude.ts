@@ -65,7 +65,6 @@ Create all 7 days (Monday through Sunday). Make meals delicious, practical, and 
   const stream = await anthropic.messages.stream({
     model: MODEL,
     max_tokens: 16000,
-    thinking: { type: "enabled", budget_tokens: 8000 },
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -137,7 +136,6 @@ Return ONLY valid JSON matching this exact structure (no markdown, no explanatio
   const stream = await anthropic.messages.stream({
     model: MODEL,
     max_tokens: 4000,
-    thinking: { type: "enabled", budget_tokens: 2000 },
     messages: [{ role: "user", content: prompt }],
   });
 
