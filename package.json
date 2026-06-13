@@ -45,9 +45,14 @@
         "to": ".env.local"
       }
     ],
+    "afterSign": "electron/notarize.js",
     "mac": {
       "category": "public.app-category.healthcare-fitness",
       "icon": "public/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "electron/entitlements.mac.plist",
+      "entitlementsInherit": "electron/entitlements.mac.plist",
       "target": [
         {
           "target": "dmg",
@@ -101,6 +106,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
