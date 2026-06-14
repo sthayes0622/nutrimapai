@@ -84,7 +84,7 @@ export default function HomePage() {
           </div>
           <p className="text-sm text-gray-500 mt-4">Free to start. No credit card required.</p>
           <div className="mt-6">
-            <a href="https://github.com/sthayes0622/nutrimapai/releases/tag/v0.1.0" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/sthayes0622/nutrimapai/releases/tag/v0.2.0" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors">
               <span>🍎</span> Download Mac App
             </a>
