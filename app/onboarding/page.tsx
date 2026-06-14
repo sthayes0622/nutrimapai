@@ -98,6 +98,14 @@ export default function OnboardingPage() {
         cuisinePreferences: form.cuisinePreferences,
       };
       localStorage.setItem("nutrimap_profile", JSON.stringify(profileWithPrefs));
+
+      // Save to database if signed in
+      await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profileWithPrefs),
+      }).catch(() => {});
+
       router.push("/dashboard");
     } catch {
       setError("Something went wrong. Please try again.");

@@ -22,11 +22,30 @@ export default function DashboardPage() {
   const [recipe, setRecipe] = useState<RecipeTarget | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("nutrimap_profile");
-    if (!stored) { router.push("/onboarding"); return; }
-    setProfile(JSON.parse(stored));
-    const storedPlan = localStorage.getItem("nutrimap_meal_plan");
-    if (storedPlan) setMealPlan(JSON.parse(storedPlan));
+    async function loadProfile() {
+      // Try loading from DB first if signed in
+      try {
+        const res = await fetch("/api/profile");
+        if (res.ok) {
+          const dbProfile = await res.json();
+          if (dbProfile) {
+            setProfile(dbProfile);
+            localStorage.setItem("nutrimap_profile", JSON.stringify(dbProfile));
+            const storedPlan = localStorage.getItem("nutrimap_meal_plan");
+            if (storedPlan) setMealPlan(JSON.parse(storedPlan));
+            return;
+          }
+        }
+      } catch {}
+
+      // Fall back to localStorage
+      const stored = localStorage.getItem("nutrimap_profile");
+      if (!stored) { router.push("/onboarding"); return; }
+      setProfile(JSON.parse(stored));
+      const storedPlan = localStorage.getItem("nutrimap_meal_plan");
+      if (storedPlan) setMealPlan(JSON.parse(storedPlan));
+    }
+    loadProfile();
   }, [router]);
 
   async function generatePlan() {
