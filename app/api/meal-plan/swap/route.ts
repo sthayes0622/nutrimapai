@@ -18,12 +18,13 @@ export async function POST(req: NextRequest) {
     custom: "balanced with variety",
   };
 
-  const mealCalories = {
+  const mealCaloriesMap: Record<string, number> = {
     breakfast: Math.round(profile.dailyCalories * 0.25),
     lunch: Math.round(profile.dailyCalories * 0.35),
     dinner: Math.round(profile.dailyCalories * 0.30),
     snack: Math.round(profile.dailyCalories * 0.10),
-  }[mealType] || Math.round(profile.dailyCalories * 0.25);
+  };
+  const mealCalories = mealCaloriesMap[mealType as string] ?? Math.round(profile.dailyCalories * 0.25);
 
   const preferencesText = [
     profile.allergies ? `- ALLERGIES (never include): ${profile.allergies}` : "",
