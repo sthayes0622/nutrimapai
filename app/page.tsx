@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { CheckIcon } from "@/components/ui/icons";
 import { MobileInstallBanner } from "@/components/MobileInstallBanner";
 
@@ -47,7 +48,7 @@ export default function HomePage() {
       <nav className="border-b border-gray-100 bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🥗</span>
+            <Image src="/icon.png" alt="NutriMap AI" width={32} height={32} className="rounded-lg" />
             <span className="font-bold text-xl text-gray-900">NutriMap AI</span>
           </div>
           <div className="flex items-center gap-3">
@@ -185,7 +186,7 @@ export default function HomePage() {
       <footer className="border-t border-gray-100 py-12 px-4">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🥗</span>
+            <Image src="/icon.png" alt="NutriMap AI" width={28} height={28} className="rounded-lg" />
             <span className="font-bold text-gray-900">NutriMap AI</span>
           </div>
           <p className="text-sm text-gray-500">© 2025 NutriMap AI. All rights reserved.</p>
