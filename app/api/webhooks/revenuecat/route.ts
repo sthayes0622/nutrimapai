@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
           status: "active",
           plan: "premium",
           currentPeriodEnd: expiresAt,
-          stripeSubscriptionId: `rc_${appUserId}`,
+          stripeCustomerId: `rc_${appUserId}`,
+          stripeSubscriptionId: `rc_sub_${appUserId}`,
         },
       });
     } else if (["CANCELLATION", "EXPIRATION", "BILLING_ISSUE"].includes(eventType)) {
