@@ -27,7 +27,8 @@ export default function DashboardPage() {
       try {
         const res = await fetch("/api/profile");
         if (res.ok) {
-          const dbProfile = await res.json();
+          const data = await res.json();
+          const dbProfile = data?.profile ?? data;
           if (dbProfile) {
             setProfile(dbProfile);
             localStorage.setItem("nutrimap_profile", JSON.stringify(dbProfile));
