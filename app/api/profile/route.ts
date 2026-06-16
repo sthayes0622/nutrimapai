@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
   if (!profile) return NextResponse.json({ profile: null });
 
   return NextResponse.json({
+    userId,
     profile: {
       age: profile.age,
       sex: profile.sex,
