@@ -7,6 +7,7 @@ import Image from "next/image";
 
 const tabs = [
   { href: "/dashboard", label: "Meal Plan", emoji: "🍽️" },
+  { href: "/diary", label: "Diary", emoji: "📓" },
   { href: "/grocery", label: "Grocery", emoji: "🛒" },
   { href: "/account", label: "Profile", emoji: "👤" },
 ];

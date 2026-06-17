@@ -28,11 +28,7 @@ export default function GroceryPage() {
 
   useEffect(() => {
     const storedPlan = localStorage.getItem("nutrimap_meal_plan");
-    if (!storedPlan) {
-      router.push("/dashboard");
-      return;
-    }
-    setMealPlan(JSON.parse(storedPlan));
+    if (storedPlan) setMealPlan(JSON.parse(storedPlan));
 
     const storedList = localStorage.getItem("nutrimap_grocery_list");
     if (storedList) {
@@ -78,25 +74,24 @@ export default function GroceryPage() {
   ) ?? 0;
   const checkedCount = Object.values(checked).filter(Boolean).length;
 
-  if (!mealPlan) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <SpinnerIcon className="w-8 h-8 text-green-600 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <AppLayout>
       <div>
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Grocery List</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Based on your 7-day meal plan: {mealPlan.name}
-          </p>
+          {mealPlan && <p className="text-gray-500 text-sm mt-1">Based on your 7-day meal plan: {mealPlan.name}</p>}
         </div>
 
-        {!groceryList ? (
+        {!mealPlan && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+            <div className="text-5xl mb-4">🍽️</div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">No meal plan yet</h2>
+            <p className="text-gray-600 mb-6">Generate a meal plan first, then come back to build your grocery list.</p>
+            <a href="/dashboard" className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors inline-block">Go to Meal Plan →</a>
+          </div>
+        )}
+
+        {mealPlan && !groceryList ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
             <div className="text-5xl mb-4">🛒</div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">
@@ -122,7 +117,7 @@ export default function GroceryPage() {
               )}
             </button>
           </div>
-        ) : (
+        ) : mealPlan ? (
           <div>
             {/* Progress bar */}
             <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-6 flex items-center gap-4">
@@ -154,7 +149,7 @@ export default function GroceryPage() {
 
             {/* Categories */}
             <div className="space-y-4">
-              {groceryList.categories.map((cat) => (
+              {groceryList?.categories.map((cat) => (
                 <div
                   key={cat.category}
                   className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
@@ -221,7 +216,7 @@ export default function GroceryPage() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </div>
     </AppLayout>
   );

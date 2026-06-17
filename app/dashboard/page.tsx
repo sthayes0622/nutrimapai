@@ -23,18 +23,6 @@ export default function DashboardPage() {
   const [recipe, setRecipe] = useState<RecipeTarget | null>(null);
   const [showRegenModal, setShowRegenModal] = useState(false);
   const [regenNotes, setRegenNotes] = useState("");
-  const [water, setWater] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    const key = `water_${new Date().toISOString().split("T")[0]}`;
-    return parseInt(localStorage.getItem(key) || "0");
-  });
-
-  function setWaterAndSave(n: number) {
-    const clamped = Math.max(0, Math.min(12, n));
-    setWater(clamped);
-    const key = `water_${new Date().toISOString().split("T")[0]}`;
-    localStorage.setItem(key, clamped.toString());
-  }
 
   useEffect(() => {
     async function loadProfile() {
@@ -228,28 +216,6 @@ export default function DashboardPage() {
                 <div className="text-xs text-gray-600 mt-1 font-medium">{m.label}</div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Water tracker */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-gray-900">💧 Water Intake</h2>
-            <span className="text-sm text-green-600 font-semibold">{water}/8 glasses</span>
-          </div>
-          <div className="flex gap-2 mb-3">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <button key={i} onClick={() => setWaterAndSave(i + 1)}
-                className={`flex-1 h-8 rounded-lg transition-colors text-sm ${i < water ? "bg-blue-400 text-white" : "bg-gray-100 text-gray-400 hover:bg-blue-100"}`}>
-                {i < water ? "💧" : "○"}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setWaterAndSave(water - 1)}
-              className="px-4 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">− Remove</button>
-            <button onClick={() => setWaterAndSave(water + 1)}
-              className="flex-1 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">+ Add Glass</button>
           </div>
         </div>
 
