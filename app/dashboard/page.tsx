@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { SpinnerIcon } from "@/components/ui/icons";
 import { RecipeModal } from "@/components/RecipeModal";
+import { AppLayout } from "@/components/AppLayout";
 import type { NutritionProfile, MealPlan, Meal } from "@/lib/types";
 import { DIET_STYLE_LABELS, GOAL_LABELS, ACTIVITY_LABELS } from "@/lib/utils";
 
@@ -157,7 +158,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AppLayout>
       {/* Regen preferences modal */}
       {showRegenModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
@@ -190,24 +191,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <nav className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl">🥗</span>
-            <span className="font-bold text-lg text-gray-900">NutriMap AI</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            {mealPlan && <Link href="/grocery" className="text-sm text-gray-600 hover:text-gray-900 font-medium">Grocery List</Link>}
-            {session ? (
-              <Link href="/account" className="text-sm text-gray-600 hover:text-gray-900 font-medium">Account</Link>
-            ) : (
-              <Link href="/auth/register" className="text-sm bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700">Sign Up Free</Link>
-            )}
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div>
         {/* Sign up prompt for guests */}
         {!session && mealPlan && (
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex items-center justify-between flex-wrap gap-3">
@@ -363,6 +347,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }
