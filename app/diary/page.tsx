@@ -65,6 +65,7 @@ export default function DiaryPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [custom, setCustom] = useState({ name: "", calories: "", proteinG: "", carbsG: "", fatG: "" });
   const [search, setSearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const suggestions = search.trim().length > 0
     ? QUICK_ADDS.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()))
@@ -201,11 +202,13 @@ export default function DiaryPage() {
                   <input
                     value={custom.name}
                     onChange={(e) => { setCustom((c) => ({ ...c, name: e.target.value })); setSearch(e.target.value); }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                     placeholder="Search or type a food name..."
                     autoFocus
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
                   />
-                  {suggestions.length > 0 && (
+                  {showSuggestions && suggestions.length > 0 && (
                     <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
                       {suggestions.map((item) => (
                         <button key={item.name} onMouseDown={() => {
