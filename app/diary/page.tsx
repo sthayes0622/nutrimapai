@@ -26,6 +26,11 @@ export default function DiaryPage() {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [custom, setCustom] = useState({ name: "", calories: "", proteinG: "", carbsG: "", fatG: "" });
+  const [search, setSearch] = useState("");
+
+  const suggestions = search.trim().length > 0
+    ? QUICK_ADDS.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()))
+    : QUICK_ADDS;
   const [profile, setProfile] = useState<{ dailyCalories?: number; proteinG?: number; carbsG?: number; fatG?: number } | null>(null);
 
   useEffect(() => {
@@ -152,22 +157,35 @@ export default function DiaryPage() {
           {/* Add food panel */}
           {showAdd && (
             <div className="border-b border-gray-100 p-6 bg-gray-50 space-y-4">
-              <h3 className="font-semibold text-gray-900">Quick Add</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {QUICK_ADDS.map((item) => (
-                  <button key={item.name} onClick={() => addEntry(item)}
-                    className="text-left bg-white border border-gray-200 rounded-xl p-3 hover:border-green-400 hover:bg-green-50 transition-colors">
-                    <div className="text-sm font-semibold text-gray-900 mb-0.5">{item.name}</div>
-                    <div className="text-xs text-green-600 font-bold">{item.calories} cal</div>
-                    <div className="text-xs text-gray-400">{item.proteinG}g P · {item.carbsG}g C · {item.fatG}g F</div>
-                  </button>
-                ))}
-              </div>
-
-              <h3 className="font-semibold text-gray-900 pt-2">Custom Entry</h3>
+              <h3 className="font-semibold text-gray-900">Custom Entry</h3>
               <div className="space-y-3">
-                <input value={custom.name} onChange={(e) => setCustom((c) => ({ ...c, name: e.target.value }))}
-                  placeholder="Food name" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <div className="relative">
+                  <input
+                    value={custom.name}
+                    onChange={(e) => { setCustom((c) => ({ ...c, name: e.target.value })); setSearch(e.target.value); }}
+                    placeholder="Search or type a food name..."
+                    autoFocus
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  />
+                  {suggestions.length > 0 && (
+                    <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                      {suggestions.map((item) => (
+                        <button key={item.name} onMouseDown={() => {
+                          addEntry(item);
+                          setSearch("");
+                          setCustom({ name: "", calories: "", proteinG: "", carbsG: "", fatG: "" });
+                        }}
+                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-green-50 transition-colors text-left border-b border-gray-50 last:border-0">
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">{item.name}</div>
+                            <div className="text-xs text-gray-400">{item.proteinG}g P · {item.carbsG}g C · {item.fatG}g F</div>
+                          </div>
+                          <span className="text-sm font-bold text-green-600 ml-4">{item.calories} cal</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
                     { key: "calories", label: "Calories" },
