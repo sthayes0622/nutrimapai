@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SpinnerIcon, CheckIcon } from "@/components/ui/icons";
+import { AppLayout } from "@/components/AppLayout";
 
 interface AccountData {
   plan: string;
@@ -73,21 +74,8 @@ function AccountContent() {
   const isPremium = account.plan === "premium" && account.status === "active";
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl">🥗</span>
-            <span className="font-bold text-lg text-gray-900">NutriMap AI</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-sm text-gray-600 hover:text-gray-900 font-medium">Dashboard</Link>
-            <button onClick={() => signOut({ callbackUrl: "/" })} className="text-sm text-gray-500 hover:text-gray-700">Sign out</button>
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-2xl mx-auto px-4 py-10">
+    <AppLayout>
+      <div className="max-w-2xl mx-auto">
         {success && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 flex items-center gap-3">
             <CheckIcon className="w-5 h-5 text-green-600" />
@@ -174,7 +162,7 @@ function AccountContent() {
           )}
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
 

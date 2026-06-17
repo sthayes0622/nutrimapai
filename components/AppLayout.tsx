@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 
 const tabs = [
@@ -32,7 +32,10 @@ export function AppLayout({ children, title }: { children: React.ReactNode; titl
             </Link>
           )}
           {session && (
-            <span className="text-green-100 text-sm">{(session.user as { name?: string })?.name?.split(" ")[0]}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-green-100 text-sm">{(session.user as { name?: string })?.name?.split(" ")[0]}</span>
+              <button onClick={() => signOut({ callbackUrl: "/" })} className="text-xs text-green-200 hover:text-white transition-colors">Sign out</button>
+            </div>
           )}
         </div>
 
