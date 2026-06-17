@@ -22,6 +22,9 @@ const QUICK_ADDS = [
   { name: "Cottage Cheese (½ cup)", calories: 110, proteinG: 14, carbsG: 5, fatG: 2 },
   { name: "Protein Shake", calories: 150, proteinG: 25, carbsG: 8, fatG: 3 },
   { name: "Turkey Breast (4oz)", calories: 153, proteinG: 34, carbsG: 0, fatG: 1 },
+  { name: "Steak (6oz)", calories: 336, proteinG: 42, carbsG: 0, fatG: 18 },
+  { name: "Pork Chop (4oz)", calories: 187, proteinG: 26, carbsG: 0, fatG: 9 },
+  { name: "Bacon (2 strips)", calories: 86, proteinG: 6, carbsG: 0, fatG: 7 },
   // Carbs
   { name: "Brown Rice (1 cup)", calories: 216, proteinG: 5, carbsG: 45, fatG: 2 },
   { name: "White Rice (1 cup)", calories: 206, proteinG: 4, carbsG: 45, fatG: 0 },
