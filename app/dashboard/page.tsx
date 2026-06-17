@@ -57,7 +57,6 @@ export default function DashboardPage() {
     setGenerating(true);
     setError("");
     setLimitReached(false);
-    setMealPlan(null);
     setShowRegenModal(false);
 
     try {
@@ -71,6 +70,7 @@ export default function DashboardPage() {
       if (res.status === 403) { setLimitReached(true); return; }
       if (!res.ok) throw new Error("Failed");
 
+      setMealPlan(null);
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let accumulated = "";

@@ -21,7 +21,7 @@ export function AppLayout({ children, title }: { children: React.ReactNode; titl
       {/* Green app header */}
       <header className="bg-green-600 text-white sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2">
             <Image src="/icon.png" alt="NutriMap AI" width={28} height={28} className="rounded-lg opacity-90" />
             <span className="font-bold text-lg text-white">NutriMap AI</span>
           </Link>
