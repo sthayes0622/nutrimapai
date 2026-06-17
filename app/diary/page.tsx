@@ -9,14 +9,49 @@ const waterKey = () => `water_${dateKey()}`;
 const diaryKey = () => `diary_${dateKey()}`;
 
 const QUICK_ADDS = [
-  { name: "Banana", calories: 105, proteinG: 1, carbsG: 27, fatG: 0 },
-  { name: "Greek Yogurt", calories: 100, proteinG: 17, carbsG: 6, fatG: 0 },
+  // Protein
   { name: "Chicken Breast (4oz)", calories: 185, proteinG: 35, carbsG: 0, fatG: 4 },
-  { name: "Brown Rice (1 cup)", calories: 216, proteinG: 5, carbsG: 45, fatG: 2 },
-  { name: "Avocado (half)", calories: 120, proteinG: 2, carbsG: 6, fatG: 11 },
+  { name: "Chicken Thigh (4oz)", calories: 210, proteinG: 28, carbsG: 0, fatG: 11 },
+  { name: "Ground Beef 90% (4oz)", calories: 196, proteinG: 24, carbsG: 0, fatG: 11 },
+  { name: "Salmon (4oz)", calories: 233, proteinG: 25, carbsG: 0, fatG: 14 },
+  { name: "Tuna (can, 3oz)", calories: 100, proteinG: 22, carbsG: 0, fatG: 1 },
+  { name: "Shrimp (4oz)", calories: 112, proteinG: 24, carbsG: 0, fatG: 1 },
   { name: "Egg", calories: 78, proteinG: 6, carbsG: 1, fatG: 5 },
-  { name: "Almonds (1oz)", calories: 164, proteinG: 6, carbsG: 6, fatG: 14 },
+  { name: "Egg Whites (3)", calories: 52, proteinG: 11, carbsG: 1, fatG: 0 },
+  { name: "Greek Yogurt", calories: 100, proteinG: 17, carbsG: 6, fatG: 0 },
+  { name: "Cottage Cheese (½ cup)", calories: 110, proteinG: 14, carbsG: 5, fatG: 2 },
   { name: "Protein Shake", calories: 150, proteinG: 25, carbsG: 8, fatG: 3 },
+  { name: "Turkey Breast (4oz)", calories: 153, proteinG: 34, carbsG: 0, fatG: 1 },
+  // Carbs
+  { name: "Brown Rice (1 cup)", calories: 216, proteinG: 5, carbsG: 45, fatG: 2 },
+  { name: "White Rice (1 cup)", calories: 206, proteinG: 4, carbsG: 45, fatG: 0 },
+  { name: "Oatmeal (½ cup dry)", calories: 150, proteinG: 5, carbsG: 27, fatG: 3 },
+  { name: "Sweet Potato (medium)", calories: 103, proteinG: 2, carbsG: 24, fatG: 0 },
+  { name: "White Potato (medium)", calories: 163, proteinG: 4, carbsG: 37, fatG: 0 },
+  { name: "Whole Wheat Bread (slice)", calories: 81, proteinG: 4, carbsG: 14, fatG: 1 },
+  { name: "Pasta (2oz dry)", calories: 200, proteinG: 7, carbsG: 41, fatG: 1 },
+  { name: "Quinoa (1 cup cooked)", calories: 222, proteinG: 8, carbsG: 39, fatG: 4 },
+  { name: "Banana", calories: 105, proteinG: 1, carbsG: 27, fatG: 0 },
+  { name: "Apple (medium)", calories: 95, proteinG: 0, carbsG: 25, fatG: 0 },
+  { name: "Blueberries (1 cup)", calories: 84, proteinG: 1, carbsG: 21, fatG: 0 },
+  { name: "Orange (medium)", calories: 62, proteinG: 1, carbsG: 15, fatG: 0 },
+  // Fats
+  { name: "Avocado (half)", calories: 120, proteinG: 2, carbsG: 6, fatG: 11 },
+  { name: "Almonds (1oz)", calories: 164, proteinG: 6, carbsG: 6, fatG: 14 },
+  { name: "Peanut Butter (2 tbsp)", calories: 188, proteinG: 8, carbsG: 6, fatG: 16 },
+  { name: "Almond Butter (2 tbsp)", calories: 196, proteinG: 7, carbsG: 6, fatG: 18 },
+  { name: "Olive Oil (1 tbsp)", calories: 119, proteinG: 0, carbsG: 0, fatG: 14 },
+  { name: "Walnuts (1oz)", calories: 185, proteinG: 4, carbsG: 4, fatG: 18 },
+  { name: "Cashews (1oz)", calories: 157, proteinG: 5, carbsG: 9, fatG: 12 },
+  { name: "Cheese (1oz)", calories: 113, proteinG: 7, carbsG: 0, fatG: 9 },
+  // Dairy & Other
+  { name: "Milk (1 cup)", calories: 149, proteinG: 8, carbsG: 12, fatG: 8 },
+  { name: "Skim Milk (1 cup)", calories: 83, proteinG: 8, carbsG: 12, fatG: 0 },
+  { name: "Whey Protein (scoop)", calories: 120, proteinG: 24, carbsG: 3, fatG: 2 },
+  // Veggies
+  { name: "Broccoli (1 cup)", calories: 55, proteinG: 4, carbsG: 11, fatG: 1 },
+  { name: "Spinach (2 cups)", calories: 14, proteinG: 2, carbsG: 2, fatG: 0 },
+  { name: "Mixed Salad (2 cups)", calories: 20, proteinG: 2, carbsG: 3, fatG: 0 },
 ];
 
 interface LogEntry { id: string; name: string; calories: number; proteinG: number; carbsG: number; fatG: number; time: string; }
