@@ -27,6 +27,7 @@ const schema = z.object({
     dislikedFoods: z.string().optional(),
     allergies: z.string().optional(),
     cuisinePreferences: z.string().optional(),
+    regenNotes: z.string().optional(),
   }),
   dietStyle: z.enum([
     "balanced", "high_protein", "vegan", "vegetarian", "mediterranean", "keto", "custom",
@@ -48,6 +49,7 @@ function buildPrompt(profile: NutritionProfile & { dislikedFoods?: string; aller
     profile.allergies ? `- ALLERGIES (never include): ${profile.allergies}` : "",
     profile.dislikedFoods ? `- Foods to avoid (disliked): ${profile.dislikedFoods}` : "",
     profile.cuisinePreferences ? `- Preferred cuisines: ${profile.cuisinePreferences}` : "",
+    (profile as { regenNotes?: string }).regenNotes ? `- Special requests for this plan: ${(profile as { regenNotes?: string }).regenNotes}` : "",
   ].filter(Boolean).join("\n");
 
   return `You are a professional nutritionist. Create a detailed 7-day meal plan for someone with these nutrition needs:
