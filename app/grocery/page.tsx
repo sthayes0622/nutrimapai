@@ -13,6 +13,17 @@ export default function GroceryPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [copied, setCopied] = useState(false);
+
+  async function handleShare() {
+    if (!groceryList) return;
+    const text = groceryList.categories.map((cat) =>
+      `${cat.category}:\n${cat.items.map((i) => `• ${i.name} — ${i.quantity} ${i.unit}`).join("\n")}`
+    ).join("\n\n");
+    await navigator.clipboard.writeText(`🛒 Grocery List\n\n${text}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   useEffect(() => {
     const storedPlan = localStorage.getItem("nutrimap_meal_plan");
@@ -140,13 +151,16 @@ export default function GroceryPage() {
                   />
                 </div>
               </div>
-              <button
-                onClick={generateList}
-                disabled={generating}
-                className="text-sm text-green-600 hover:text-green-700 font-medium whitespace-nowrap"
-              >
-                {generating ? "Regenerating..." : "Regenerate"}
-              </button>
+              <div className="flex gap-3">
+                <button onClick={handleShare}
+                  className="text-sm text-gray-600 hover:text-gray-900 font-medium whitespace-nowrap">
+                  {copied ? "✓ Copied!" : "↑ Copy List"}
+                </button>
+                <button onClick={generateList} disabled={generating}
+                  className="text-sm text-green-600 hover:text-green-700 font-medium whitespace-nowrap">
+                  {generating ? "Regenerating..." : "Regenerate"}
+                </button>
+              </div>
             </div>
 
             {/* Categories */}

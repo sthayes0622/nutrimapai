@@ -20,6 +20,20 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [limitReached, setLimitReached] = useState(false);
   const [recipe, setRecipe] = useState<RecipeTarget | null>(null);
+  const [showRegenModal, setShowRegenModal] = useState(false);
+  const [regenNotes, setRegenNotes] = useState("");
+  const [water, setWater] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const key = `water_${new Date().toISOString().split("T")[0]}`;
+    return parseInt(localStorage.getItem(key) || "0");
+  });
+
+  function setWaterAndSave(n: number) {
+    const clamped = Math.max(0, Math.min(12, n));
+    setWater(clamped);
+    const key = `water_${new Date().toISOString().split("T")[0]}`;
+    localStorage.setItem(key, clamped.toString());
+  }
 
   useEffect(() => {
     async function loadProfile() {
@@ -49,18 +63,20 @@ export default function DashboardPage() {
     loadProfile();
   }, [router]);
 
-  async function generatePlan() {
+  async function generatePlan(notes = "") {
     if (!profile) return;
     setGenerating(true);
     setError("");
     setLimitReached(false);
     setMealPlan(null);
+    setShowRegenModal(false);
 
     try {
+      const profileWithNotes = notes ? { ...profile, regenNotes: notes } : profile;
       const res = await fetch("/api/meal-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile, dietStyle: profile.dietStyle }),
+        body: JSON.stringify({ profile: profileWithNotes, dietStyle: profile.dietStyle }),
       });
 
       if (res.status === 403) { setLimitReached(true); return; }
@@ -142,7 +158,37 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {recipe && <RecipeModal meal={recipe.meal} label={recipe.label} onClose={() => setRecipe(null)} />}
+      {/* Regen preferences modal */}
+      {showRegenModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowRegenModal(false); }}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">New Meal Plan</h2>
+              <button onClick={() => setShowRegenModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            </div>
+            <p className="text-gray-500 text-sm">Any preferences for this plan? (optional)</p>
+            <textarea
+              value={regenNotes}
+              onChange={(e) => setRegenNotes(e.target.value)}
+              placeholder="e.g. more chicken, less pasta, quick meals under 30 min..."
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <div className="flex flex-wrap gap-2">
+              {["More protein", "Less carbs", "Quick meals", "Budget friendly", "No repeats"].map((s) => (
+                <button key={s} onClick={() => setRegenNotes((n) => n ? `${n}, ${s.toLowerCase()}` : s.toLowerCase())}
+                  className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-3 py-1.5 hover:bg-green-100 transition-colors">
+                  {s}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => generatePlan(regenNotes)}
+              className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors">
+              Generate New Plan →
+            </button>
+          </div>
+        </div>
+      )}
 
       <nav className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -201,6 +247,28 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Water tracker */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-gray-900">💧 Water Intake</h2>
+            <span className="text-sm text-green-600 font-semibold">{water}/8 glasses</span>
+          </div>
+          <div className="flex gap-2 mb-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <button key={i} onClick={() => setWaterAndSave(i + 1)}
+                className={`flex-1 h-8 rounded-lg transition-colors text-sm ${i < water ? "bg-blue-400 text-white" : "bg-gray-100 text-gray-400 hover:bg-blue-100"}`}>
+                {i < water ? "💧" : "○"}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setWaterAndSave(water - 1)}
+              className="px-4 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">− Remove</button>
+            <button onClick={() => setWaterAndSave(water + 1)}
+              className="flex-1 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">+ Add Glass</button>
+          </div>
+        </div>
+
         {/* Free limit upgrade prompt */}
         {limitReached && (
           <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-6 mb-8 text-white">
@@ -224,7 +292,7 @@ export default function DashboardPage() {
               AI will create a personalized plan with full recipes tailored to your {DIET_STYLE_LABELS[profile.dietStyle].toLowerCase()} diet.
             </p>
             {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-            <button onClick={generatePlan} disabled={generating}
+            <button onClick={() => generatePlan()} disabled={generating}
               className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
               {generating ? <><SpinnerIcon className="w-4 h-4 animate-spin" /> Generating your plan...</> : "Generate Meal Plan →"}
             </button>
@@ -234,7 +302,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">{mealPlan.name}</h2>
               <div className="flex gap-3">
-                <button onClick={generatePlan} disabled={generating} className="text-sm text-green-600 hover:text-green-700 font-medium disabled:opacity-50 inline-flex items-center gap-1">
+                <button onClick={() => { setRegenNotes(""); setShowRegenModal(true); }} disabled={generating} className="text-sm text-green-600 hover:text-green-700 font-medium disabled:opacity-50 inline-flex items-center gap-1">
                   {generating ? <><SpinnerIcon className="w-3 h-3 animate-spin" /> Generating...</> : "Regenerate"}
                 </button>
                 <Link href="/grocery" className="text-sm bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700">
