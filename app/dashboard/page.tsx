@@ -243,10 +243,20 @@ export default function DashboardPage() {
               AI will create a personalized plan with full recipes tailored to your {DIET_STYLE_LABELS[profile.dietStyle].toLowerCase()} diet.
             </p>
             {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-            <button onClick={() => generatePlan()} disabled={generating}
-              className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
-              {generating ? <><SpinnerIcon className="w-4 h-4 animate-spin" /> Generating your plan...</> : "Generate Meal Plan →"}
-            </button>
+            {!session ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-500">Sign in or create a free account to generate your meal plan.</p>
+                <div className="flex gap-3 justify-center">
+                  <Link href="/auth/register" className="bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors text-sm">Create Free Account →</Link>
+                  <Link href="/auth/signin" className="border border-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-colors text-sm">Sign In</Link>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => generatePlan()} disabled={generating}
+                className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
+                {generating ? <><SpinnerIcon className="w-4 h-4 animate-spin" /> Generating your plan...</> : "Generate Meal Plan →"}
+              </button>
+            )}
           </div>
         ) : (
           <div>
