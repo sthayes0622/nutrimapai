@@ -67,6 +67,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ profile: profileWithNotes, dietStyle: profile.dietStyle }),
       });
 
+      if (res.status === 401) { router.push("/auth/register"); return; }
       if (res.status === 403) { setLimitReached(true); return; }
       if (!res.ok) throw new Error("Failed");
 

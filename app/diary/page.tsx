@@ -209,11 +209,13 @@ export default function DiaryPage() {
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
                   />
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                    <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-72 overflow-y-auto">
                       {suggestions.map((item) => (
-                        <button key={item.name} onMouseDown={() => {
+                        <button key={item.name} onMouseDown={(e) => {
+                          e.preventDefault();
                           addEntry(item);
                           setSearch("");
+                          setShowSuggestions(false);
                           setCustom({ name: "", calories: "", proteinG: "", carbsG: "", fatG: "" });
                         }}
                           className="w-full flex items-center justify-between px-4 py-3 hover:bg-green-50 transition-colors text-left border-b border-gray-50 last:border-0">

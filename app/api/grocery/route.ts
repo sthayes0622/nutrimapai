@@ -12,12 +12,8 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     const userId = (session?.user as { id?: string })?.id;
 
-    // Grocery list is a premium-only feature (or comes with the free meal plan)
-    if (userId) {
-      const premium = await isPremium(userId);
-      // Allow free users to generate grocery list for their one free meal plan
-      // Premium users have unlimited
-      void premium; // gating is on meal plan generation
+    if (!userId) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
     const mealPlan: MealPlan = await req.json();
