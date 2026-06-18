@@ -1,11 +1,26 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
+import { jwtVerify } from "jose";
 import { authOptions } from "@/lib/auth";
 import { isPremium, checkFreeUsage, incrementUsage } from "@/lib/subscription";
 import { prisma } from "@/lib/prisma";
 import Anthropic from "@anthropic-ai/sdk";
 import type { NutritionProfile, DietStyle } from "@/lib/types";
+
+async function getUserId(req: NextRequest): Promise<string | null> {
+  const auth = req.headers.get("authorization");
+  if (auth?.startsWith("Bearer ")) {
+    try {
+      const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!);
+      const { payload } = await jwtVerify(auth.slice(7), secret);
+      return payload.id as string;
+    } catch {}
+  }
+  const session = await getServerSession(authOptions);
+  if (session?.user) return (session.user as { id: string }).id;
+  return null;
+}
 
 export const maxDuration = 300;
 
@@ -95,8 +110,7 @@ Create all 7 days (Monday through Sunday). Make meals delicious, practical, and 
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string })?.id;
+  const userId = await getUserId(req);
 
   if (!userId) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
