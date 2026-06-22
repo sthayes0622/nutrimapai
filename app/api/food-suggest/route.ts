@@ -2,7 +2,42 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { jwtVerify } from "jose";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import Anthropic from "@anthropic-ai/sdk";
+
+const FOOD_SUGGEST_DAILY_LIMIT = 100;
+
+// Returns true if the user is allowed another request, false if over the daily cap.
+async function checkFoodSuggestLimit(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { foodSuggestToday: true, foodSuggestResetAt: true },
+  });
+  if (!user) return false;
+
+  const now = new Date();
+  const resetAt = new Date(user.foodSuggestResetAt);
+  const isNewDay =
+    now.getFullYear() !== resetAt.getFullYear() ||
+    now.getMonth() !== resetAt.getMonth() ||
+    now.getDate() !== resetAt.getDate();
+
+  if (isNewDay) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { foodSuggestToday: 1, foodSuggestResetAt: now },
+    });
+    return true;
+  }
+
+  if (user.foodSuggestToday >= FOOD_SUGGEST_DAILY_LIMIT) return false;
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { foodSuggestToday: { increment: 1 } },
+  });
+  return true;
+}
 
 async function getUserId(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get("authorization");
@@ -27,6 +62,11 @@ export async function POST(req: NextRequest) {
   const { query } = await req.json();
   if (!query || typeof query !== "string" || query.length > 100) {
     return NextResponse.json({ error: "invalid query" }, { status: 400 });
+  }
+
+  const allowed = await checkFoodSuggestLimit(userId);
+  if (!allowed) {
+    return NextResponse.json({ error: "daily_limit_reached", suggestions: [] }, { status: 429 });
   }
 
   const message = await anthropic.messages.create({

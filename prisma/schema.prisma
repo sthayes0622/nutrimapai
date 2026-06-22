@@ -25,6 +25,8 @@ model User {
   subscription      Subscription?
   usageThisMonth    Int      @default(0)
   usageResetAt      DateTime @default(now())
+  foodSuggestToday  Int      @default(0)
+  foodSuggestResetAt DateTime @default(now())
 }
 
 model Account {
