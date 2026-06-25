@@ -49,7 +49,14 @@ const schema = z.object({
   ]),
 });
 
-function buildPrompt(profile: NutritionProfile & { dislikedFoods?: string; allergies?: string; cuisinePreferences?: string }, dietStyle: DietStyle) {
+// Builds a prompt for a SINGLE day so the 7 days can be generated in parallel.
+// This keeps each request small and fast (~10s) instead of one ~60s+ call that
+// times out on the client/reviewer device.
+function buildDayPrompt(
+  profile: NutritionProfile & { dislikedFoods?: string; allergies?: string; cuisinePreferences?: string },
+  dietStyle: DietStyle,
+  dayName: string
+) {
   const dietDescriptions: Record<string, string> = {
     balanced: "balanced with a mix of all macronutrients",
     high_protein: "high-protein focused on lean meats, eggs, and protein-rich foods",
@@ -64,10 +71,10 @@ function buildPrompt(profile: NutritionProfile & { dislikedFoods?: string; aller
     profile.allergies ? `- ALLERGIES (never include): ${profile.allergies}` : "",
     profile.dislikedFoods ? `- Foods to avoid (disliked): ${profile.dislikedFoods}` : "",
     profile.cuisinePreferences ? `- Preferred cuisines: ${profile.cuisinePreferences}` : "",
-    (profile as { regenNotes?: string }).regenNotes ? `- Special requests for this plan: ${(profile as { regenNotes?: string }).regenNotes}` : "",
+    (profile as { regenNotes?: string }).regenNotes ? `- Special requests: ${(profile as { regenNotes?: string }).regenNotes}` : "",
   ].filter(Boolean).join("\n");
 
-  return `You are a professional nutritionist. Create a detailed 7-day meal plan for someone with these nutrition needs:
+  return `You are a professional nutritionist. Create ONE day (${dayName}) of a meal plan for:
 
 - Daily Calories: ${profile.dailyCalories} kcal
 - Protein: ${profile.proteinG}g
@@ -75,39 +82,23 @@ function buildPrompt(profile: NutritionProfile & { dislikedFoods?: string; aller
 - Fat: ${profile.fatG}g
 - Diet Style: ${dietDescriptions[dietStyle]}${preferencesText ? `\n${preferencesText}` : ""}
 
-Return ONLY valid JSON matching this exact structure (no markdown, no explanation):
+Return ONLY valid JSON for this single day (no markdown, no explanation):
 {
-  "name": "7-Day ${dietStyle.replace("_", " ")} Meal Plan",
-  "dietStyle": "${dietStyle}",
-  "days": [
-    {
-      "day": "Monday",
-      "breakfast": {
-        "name": "meal name",
-        "description": "brief description",
-        "calories": 400,
-        "proteinG": 30,
-        "carbsG": 40,
-        "fatG": 12,
-        "servings": 1,
-        "ingredients": ["1 cup oats", "1 banana"],
-        "instructions": ["Step 1", "Step 2"],
-        "prepTimeMin": 5,
-        "cookTimeMin": 10
-      },
-      "lunch": { ... same structure ... },
-      "dinner": { ... same structure ... },
-      "snack": { ... same structure ... },
-      "totalCalories": 1800,
-      "totalProteinG": 120,
-      "totalCarbsG": 180,
-      "totalFatG": 60
-    }
-  ]
+  "day": "${dayName}",
+  "breakfast": { "name": "meal name", "description": "brief description", "calories": 400, "proteinG": 30, "carbsG": 40, "fatG": 12, "servings": 1, "ingredients": ["1 cup oats", "1 banana"], "instructions": ["Step 1", "Step 2"], "prepTimeMin": 5, "cookTimeMin": 10 },
+  "lunch": { ...same structure... },
+  "dinner": { ...same structure... },
+  "snack": { ...same structure... },
+  "totalCalories": ${profile.dailyCalories},
+  "totalProteinG": ${profile.proteinG},
+  "totalCarbsG": ${profile.carbsG},
+  "totalFatG": ${profile.fatG}
 }
 
-Create all 7 days (Monday through Sunday). Make meals delicious, practical, and varied. Ensure daily totals stay within 100 calories of ${profile.dailyCalories}.`;
+Make meals delicious, practical, and varied. Keep daily totals within 100 calories of ${profile.dailyCalories}.`;
 }
+
+const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export async function POST(req: NextRequest) {
   const userId = await getUserId(req);
@@ -134,60 +125,52 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { profile, dietStyle } = schema.parse(body);
-  const prompt = buildPrompt(profile as NutritionProfile, dietStyle);
 
-  let fullText = "";
-  const encoder = new TextEncoder();
-
-  const readable = new ReadableStream({
-    async start(controller) {
-      try {
-        const stream = anthropic.messages.stream({
+  try {
+    // Generate all 7 days in parallel — each call is small and fast (~10s),
+    // so the whole plan completes in ~10-15s instead of one ~60s+ request
+    // that times out on the client/reviewer device.
+    const dayResults = await Promise.all(
+      DAY_NAMES.map(async (dayName) => {
+        const message = await anthropic.messages.create({
           model: "claude-sonnet-4-6",
-          max_tokens: 16000,
-          messages: [{ role: "user", content: prompt }],
+          max_tokens: 3000,
+          messages: [{ role: "user", content: buildDayPrompt(profile as NutritionProfile, dietStyle, dayName) }],
         });
+        const text = message.content[0].type === "text" ? message.content[0].text : "";
+        const match = text.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error(`Failed to generate ${dayName}`);
+        return JSON.parse(match[0]);
+      })
+    );
 
-        for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            fullText += event.delta.text;
-            controller.enqueue(encoder.encode(event.delta.text));
-          }
-        }
+    const mealPlan = {
+      name: `7-Day ${dietStyle.replace("_", " ")} Meal Plan`,
+      dietStyle,
+      days: dayResults,
+    };
 
-        // Save to DB after stream completes
-        if (userId) {
-          try {
-            const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const mealPlan = JSON.parse(jsonMatch[0]);
-              await prisma.mealPlan.create({
-                data: {
-                  userId,
-                  name: mealPlan.name,
-                  days: mealPlan.days as object[],
-                  dietStyle: mealPlan.dietStyle,
-                },
-              });
-              const premium = await isPremium(userId);
-              if (!premium) await incrementUsage(userId);
-            }
-          } catch (e) {
-            console.error("DB save error:", e);
-          }
-        }
-
-        controller.close();
+    // Save to DB and count usage for free users
+    if (userId) {
+      try {
+        await prisma.mealPlan.create({
+          data: { userId, name: mealPlan.name, days: mealPlan.days as object[], dietStyle: mealPlan.dietStyle },
+        });
+        const premium = await isPremium(userId);
+        if (!premium) await incrementUsage(userId);
       } catch (e) {
-        controller.error(e);
+        console.error("DB save error:", e);
       }
-    },
-  });
+    }
 
-  return new Response(readable, {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
-  });
+    return new Response(JSON.stringify(mealPlan), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("Meal plan generation error:", e);
+    return new Response(JSON.stringify({ error: "generation_failed" }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
