@@ -15,9 +15,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    // Brute-force protection: lock the account after 5 failed attempts for 15 min.
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again in a few minutes." },
+        { status: 429 }
+      );
+    }
+
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
+      const attempts = user.failedLoginCount + 1;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginCount: attempts,
+          lockedUntil: attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null,
+        },
+      });
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    // Successful login — reset the failed-attempt counter.
+    if (user.failedLoginCount > 0 || user.lockedUntil) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginCount: 0, lockedUntil: null },
+      });
     }
 
     const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!);

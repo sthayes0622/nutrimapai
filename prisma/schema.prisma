@@ -27,6 +27,10 @@ model User {
   usageResetAt      DateTime @default(now())
   foodSuggestToday  Int      @default(0)
   foodSuggestResetAt DateTime @default(now())
+  failedLoginCount  Int      @default(0)
+  lockedUntil       DateTime?
+  mealPlansToday    Int      @default(0)
+  mealPlansTodayResetAt DateTime @default(now())
 }
 
 model Account {

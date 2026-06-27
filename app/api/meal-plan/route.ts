@@ -121,6 +121,32 @@ export async function POST(req: NextRequest) {
         });
       }
     }
+
+    // Hard daily cap for ALL users (including premium) to prevent runaway
+    // API cost from abuse. 25/day is far above any real user's needs.
+    const DAILY_CAP = 25;
+    const u = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { mealPlansToday: true, mealPlansTodayResetAt: true },
+    });
+    if (u) {
+      const now = new Date();
+      const reset = new Date(u.mealPlansTodayResetAt);
+      const newDay =
+        now.getFullYear() !== reset.getFullYear() ||
+        now.getMonth() !== reset.getMonth() ||
+        now.getDate() !== reset.getDate();
+      if (newDay) {
+        await prisma.user.update({ where: { id: userId }, data: { mealPlansToday: 1, mealPlansTodayResetAt: now } });
+      } else if (u.mealPlansToday >= DAILY_CAP) {
+        return new Response(JSON.stringify({ error: "daily_limit_reached" }), {
+          status: 429,
+          headers: { "Content-Type": "application/json" },
+        });
+      } else {
+        await prisma.user.update({ where: { id: userId }, data: { mealPlansToday: { increment: 1 } } });
+      }
+    }
   }
 
   const body = await req.json();
