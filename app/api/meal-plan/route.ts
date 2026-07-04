@@ -26,6 +26,23 @@ export const maxDuration = 300;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Returns the user's most recently generated meal plan so it persists across
+// logins and devices (the app previously only kept it in local storage).
+export async function GET(req: NextRequest) {
+  const userId = await getUserId(req);
+  if (!userId) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+
+  const latest = await prisma.mealPlan.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!latest) return new Response(JSON.stringify({ mealPlan: null }), { headers: { "Content-Type": "application/json" } });
+
+  return new Response(JSON.stringify({
+    mealPlan: { name: latest.name, dietStyle: latest.dietStyle, days: latest.days },
+  }), { headers: { "Content-Type": "application/json" } });
+}
+
 const schema = z.object({
   profile: z.object({
     age: z.number(),
