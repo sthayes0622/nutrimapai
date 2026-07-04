@@ -158,15 +158,26 @@ export async function POST(req: NextRequest) {
     // that times out on the client/reviewer device.
     const dayResults = await Promise.all(
       DAY_NAMES.map(async (dayName) => {
-        const message = await anthropic.messages.create({
-          model: "claude-sonnet-4-6",
-          max_tokens: 3000,
-          messages: [{ role: "user", content: buildDayPrompt(profile as NutritionProfile, dietStyle, dayName) }],
-        });
-        const text = message.content[0].type === "text" ? message.content[0].text : "";
-        const match = text.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error(`Failed to generate ${dayName}`);
-        return JSON.parse(match[0]);
+        // Retry each day up to 3 times with backoff so a transient Anthropic
+        // rate-limit (from firing 7 requests at once) doesn't fail the whole plan.
+        let lastErr: unknown;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const message = await anthropic.messages.create({
+              model: "claude-sonnet-4-6",
+              max_tokens: 3000,
+              messages: [{ role: "user", content: buildDayPrompt(profile as NutritionProfile, dietStyle, dayName) }],
+            });
+            const text = message.content[0].type === "text" ? message.content[0].text : "";
+            const match = text.match(/\{[\s\S]*\}/);
+            if (!match) throw new Error(`No JSON for ${dayName}`);
+            return JSON.parse(match[0]);
+          } catch (err) {
+            lastErr = err;
+            await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+          }
+        }
+        throw lastErr;
       })
     );
 
