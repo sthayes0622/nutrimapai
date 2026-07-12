@@ -170,33 +170,43 @@ export async function POST(req: NextRequest) {
   const { profile, dietStyle } = schema.parse(body);
 
   try {
-    // Generate all 7 days in parallel — each call is small and fast (~10s),
-    // so the whole plan completes in ~10-15s instead of one ~60s+ request
-    // that times out on the client/reviewer device.
-    const dayResults = await Promise.all(
-      DAY_NAMES.map(async (dayName) => {
-        // Retry each day up to 3 times with backoff so a transient Anthropic
-        // rate-limit (from firing 7 requests at once) doesn't fail the whole plan.
-        let lastErr: unknown;
-        for (let attempt = 0; attempt < 3; attempt++) {
-          try {
-            const message = await anthropic.messages.create({
-              model: "claude-sonnet-4-6",
-              max_tokens: 3000,
-              messages: [{ role: "user", content: buildDayPrompt(profile as NutritionProfile, dietStyle, dayName) }],
-            });
-            const text = message.content[0].type === "text" ? message.content[0].text : "";
-            const match = text.match(/\{[\s\S]*\}/);
-            if (!match) throw new Error(`No JSON for ${dayName}`);
-            return JSON.parse(match[0]);
-          } catch (err) {
-            lastErr = err;
-            await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
-          }
+    // Generates a single day, retrying up to 4 times with growing backoff so a
+    // transient Anthropic rate-limit doesn't fail the whole plan.
+    const generateDay = async (dayName: string) => {
+      let lastErr: unknown;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          const message = await anthropic.messages.create({
+            model: "claude-sonnet-4-6",
+            max_tokens: 3000,
+            messages: [{ role: "user", content: buildDayPrompt(profile as NutritionProfile, dietStyle, dayName) }],
+          });
+          const text = message.content[0].type === "text" ? message.content[0].text : "";
+          const match = text.match(/\{[\s\S]*\}/);
+          if (!match) throw new Error(`No JSON for ${dayName}`);
+          return JSON.parse(match[0]);
+        } catch (err) {
+          lastErr = err;
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         }
-        throw lastErr;
-      })
-    );
+      }
+      throw lastErr;
+    };
+
+    // Run the 7 days with limited concurrency (max 3 at a time) rather than all
+    // at once. This keeps generation fast (~30s) while capping peak load on the
+    // Anthropic API, so several users generating at the same time don't trip the
+    // rate limit and fail.
+    const CONCURRENCY = 3;
+    const dayResults: unknown[] = new Array(DAY_NAMES.length);
+    let nextIndex = 0;
+    async function worker() {
+      while (nextIndex < DAY_NAMES.length) {
+        const i = nextIndex++;
+        dayResults[i] = await generateDay(DAY_NAMES[i]);
+      }
+    }
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
 
     const mealPlan = {
       name: `7-Day ${dietStyle.replace("_", " ")} Meal Plan`,
