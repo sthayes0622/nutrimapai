@@ -66,13 +66,13 @@ const schema = z.object({
   ]),
 });
 
-// Builds a prompt for a SINGLE day so the 7 days can be generated in parallel.
-// This keeps each request small and fast (~10s) instead of one ~60s+ call that
-// times out on the client/reviewer device.
-function buildDayPrompt(
+// Builds a prompt for a CHUNK of days (2-3), so the week is generated in a few
+// parallel calls rather than 7. This keeps each call fast while minimizing the
+// number of API calls (less rate-limit pressure when many users generate).
+function buildChunkPrompt(
   profile: NutritionProfile & { dislikedFoods?: string; allergies?: string; cuisinePreferences?: string },
   dietStyle: DietStyle,
-  dayName: string
+  dayNames: string[]
 ) {
   const dietDescriptions: Record<string, string> = {
     balanced: "balanced with a mix of all macronutrients",
@@ -91,7 +91,7 @@ function buildDayPrompt(
     (profile as { regenNotes?: string }).regenNotes ? `- Special requests: ${(profile as { regenNotes?: string }).regenNotes}` : "",
   ].filter(Boolean).join("\n");
 
-  return `You are a professional nutritionist. Create ONE day (${dayName}) of a meal plan for:
+  return `You are a professional nutritionist. Create these days (${dayNames.join(", ")}) of a meal plan for:
 
 - Daily Calories: ${profile.dailyCalories} kcal
 - Protein: ${profile.proteinG}g
@@ -99,23 +99,27 @@ function buildDayPrompt(
 - Fat: ${profile.fatG}g
 - Diet Style: ${dietDescriptions[dietStyle]}${preferencesText ? `\n${preferencesText}` : ""}
 
-Return ONLY valid JSON for this single day (no markdown, no explanation):
-{
-  "day": "${dayName}",
-  "breakfast": { "name": "meal name", "description": "brief description", "calories": 400, "proteinG": 30, "carbsG": 40, "fatG": 12, "servings": 1, "ingredients": ["1 cup oats", "1 banana"], "instructions": ["Step 1", "Step 2"], "prepTimeMin": 5, "cookTimeMin": 10 },
-  "lunch": { ...same structure... },
-  "dinner": { ...same structure... },
-  "snack": { ...same structure... },
-  "totalCalories": ${profile.dailyCalories},
-  "totalProteinG": ${profile.proteinG},
-  "totalCarbsG": ${profile.carbsG},
-  "totalFatG": ${profile.fatG}
-}
+Return ONLY a valid JSON array of day objects (no markdown, no explanation), one object per day in this exact structure:
+[
+  {
+    "day": "${dayNames[0]}",
+    "breakfast": { "name": "meal name", "description": "brief description", "calories": 400, "proteinG": 30, "carbsG": 40, "fatG": 12, "servings": 1, "ingredients": ["1 cup oats", "1 banana"], "instructions": ["Step 1", "Step 2"], "prepTimeMin": 5, "cookTimeMin": 10 },
+    "lunch": { ...same structure... },
+    "dinner": { ...same structure... },
+    "snack": { ...same structure... },
+    "totalCalories": ${profile.dailyCalories},
+    "totalProteinG": ${profile.proteinG},
+    "totalCarbsG": ${profile.carbsG},
+    "totalFatG": ${profile.fatG}
+  }
+]
 
-Make meals delicious, practical, and varied. Keep daily totals within 100 calories of ${profile.dailyCalories}.`;
+Include all of these days: ${dayNames.join(", ")}. Make meals delicious, practical, and varied across days. Keep each day's totals within 100 calories of ${profile.dailyCalories}.`;
 }
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+// Split the week into chunks so it's generated in a few parallel calls.
+const DAY_CHUNKS = [["Monday", "Tuesday", "Wednesday"], ["Thursday", "Friday"], ["Saturday", "Sunday"]];
 
 export async function POST(req: NextRequest) {
   const userId = await getUserId(req);
@@ -170,21 +174,23 @@ export async function POST(req: NextRequest) {
   const { profile, dietStyle } = schema.parse(body);
 
   try {
-    // Generates a single day, retrying up to 4 times with growing backoff so a
-    // transient Anthropic rate-limit doesn't fail the whole plan.
-    const generateDay = async (dayName: string) => {
+    // Generates a chunk of days (returns an array), retrying up to 4 times with
+    // growing backoff so a transient Anthropic rate-limit doesn't fail the plan.
+    const generateChunk = async (dayNames: string[]): Promise<unknown[]> => {
       let lastErr: unknown;
       for (let attempt = 0; attempt < 4; attempt++) {
         try {
           const message = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
-            max_tokens: 3000,
-            messages: [{ role: "user", content: buildDayPrompt(profile as NutritionProfile, dietStyle, dayName) }],
+            max_tokens: 6000,
+            messages: [{ role: "user", content: buildChunkPrompt(profile as NutritionProfile, dietStyle, dayNames) }],
           });
           const text = message.content[0].type === "text" ? message.content[0].text : "";
-          const match = text.match(/\{[\s\S]*\}/);
-          if (!match) throw new Error(`No JSON for ${dayName}`);
-          return JSON.parse(match[0]);
+          const match = text.match(/\[[\s\S]*\]/);
+          if (!match) throw new Error(`No JSON array for ${dayNames.join(",")}`);
+          const parsed = JSON.parse(match[0]);
+          if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("Empty chunk");
+          return parsed;
         } catch (err) {
           lastErr = err;
           await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
@@ -193,20 +199,10 @@ export async function POST(req: NextRequest) {
       throw lastErr;
     };
 
-    // Run the 7 days with limited concurrency (max 3 at a time) rather than all
-    // at once. This keeps generation fast (~30s) while capping peak load on the
-    // Anthropic API, so several users generating at the same time don't trip the
-    // rate limit and fail.
-    const CONCURRENCY = 3;
-    const dayResults: unknown[] = new Array(DAY_NAMES.length);
-    let nextIndex = 0;
-    const worker = async (): Promise<void> => {
-      while (nextIndex < DAY_NAMES.length) {
-        const i = nextIndex++;
-        dayResults[i] = await generateDay(DAY_NAMES[i]);
-      }
-    };
-    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+    // Generate the 3 chunks in parallel — only 3 API calls per plan (low
+    // rate-limit pressure) while staying fast (~25s), then flatten to 7 days.
+    const chunkResults = await Promise.all(DAY_CHUNKS.map((c) => generateChunk(c)));
+    const dayResults = chunkResults.flat();
 
     const mealPlan = {
       name: `7-Day ${dietStyle.replace("_", " ")} Meal Plan`,
