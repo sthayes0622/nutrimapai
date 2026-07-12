@@ -118,8 +118,9 @@ Include all of these days: ${dayNames.join(", ")}. Make meals delicious, practic
 }
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-// Split the week into chunks so it's generated in a few parallel calls.
-const DAY_CHUNKS = [["Monday", "Tuesday", "Wednesday"], ["Thursday", "Friday"], ["Saturday", "Sunday"]];
+// One chunk per day: all 7 generate in parallel for speed (~25s). Each call is
+// small and fast, and the per-chunk retry (below) handles transient rate limits.
+const DAY_CHUNKS = DAY_NAMES.map((d) => [d]);
 
 export async function POST(req: NextRequest) {
   const userId = await getUserId(req);
@@ -182,7 +183,7 @@ export async function POST(req: NextRequest) {
         try {
           const message = await anthropic.messages.create({
             model: "claude-sonnet-4-6",
-            max_tokens: 6000,
+            max_tokens: 3000,
             messages: [{ role: "user", content: buildChunkPrompt(profile as NutritionProfile, dietStyle, dayNames) }],
           });
           const text = message.content[0].type === "text" ? message.content[0].text : "";
