@@ -200,12 +200,12 @@ export async function POST(req: NextRequest) {
     const CONCURRENCY = 3;
     const dayResults: unknown[] = new Array(DAY_NAMES.length);
     let nextIndex = 0;
-    async function worker() {
+    const worker = async (): Promise<void> => {
       while (nextIndex < DAY_NAMES.length) {
         const i = nextIndex++;
         dayResults[i] = await generateDay(DAY_NAMES[i]);
       }
-    }
+    };
     await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
 
     const mealPlan = {
